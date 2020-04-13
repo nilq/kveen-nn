@@ -22,6 +22,12 @@ import time
 import math
 import unidecode
 
+import argparse
+
+argparser = argparse.ArgumentParser()
+argparser.add_argument('--based', type=str, default="")
+args = argparser.parse_args()
+
 # .dat sounds cooler and more hackerman than .txt
 DATA_PATH = "speeches.dat"
 
@@ -73,18 +79,25 @@ def queen_spider():
 
     return whole
 
-whole = ""
+file = ""
 
 if os.path.isfile(DATA_PATH):
     with open(DATA_PATH, "r") as f:
-        file = unidecode.unidecode(f.read())
+        file = f.read()
+
+        file.replace('æ', '$')
+        file.replace('ø', '@')
+        file.replace('å', '#')
+
+        file = unidecode.unidecode(file)
         file_len = len(file)
 else:
-    whole = queen_spider()
+    file = queen_spider()
+    file_len = len(file)
 
-chars = sorted(list(set(whole)))
+chars = sorted(list(set(file)))
 
-print(f"Total length of corpus: {len(whole)}")
+print(f"Total length of corpus: {len(file)}")
 print(f"Total number of unique chars: {len(chars)}")
 
 char_indices = dict((c, i) for i, c in enumerate(chars))
@@ -97,9 +110,9 @@ step_size  = 3
 sentences  = []
 next_chars = []
 
-for i in range(0, len(whole) - maxlen, step_size):
-    sentences.append(whole[i:i + maxlen])
-    next_chars.append(whole[i + maxlen])
+for i in range(0, len(file) - maxlen, step_size):
+    sentences.append(file[i:i + maxlen])
+    next_chars.append(file[i + maxlen])
 
 print(f"Sentence sequences: {len(sentences)}\n")
 
@@ -110,18 +123,6 @@ def char_tensor(bruh):
 
     for c in range(len(bruh)):
         try:
-            if bruh[c] == "æ":
-                tensor[c] = "ae"
-                continue
-                
-            if bruh[c] == "ø":
-                tensor[c] = "oe"
-                continue
-
-            if bruh[c] == "å":
-                tensor[c] = "aa"
-                continue
-
             tensor[c] = string.printable.index(bruh[c])
         except:
             continue
@@ -188,19 +189,24 @@ class LSTMQueen(nn.Module):
 
 n_chars = len(string.printable)
 
-decoder = LSTMQueen(
-    n_chars,
-    100, # the best number le'go
-    n_chars,
-    2
-)
+if args.based != "":
+    decoder = torch.load(args.based)
+    decoder.eval()
+else:
+    decoder = LSTMQueen(
+        n_chars,
+        100, # the best number le'go
+        n_chars,
+        2
+    )
+    
 
 optimizer = optim.Adam(decoder.parameters(), lr=0.01)
 criterion = nn.CrossEntropyLoss()
 
 def generate(decoder, prime, predict_len=100, temperature=0.8):
     if not prime:
-        prime = chars[random.randint(0, len(chars))]
+        prime = random.choice(chars)
 
     hidden = decoder.init_hidden(1)
     prime_input = Variable(char_tensor(prime).unsqueeze(0))
@@ -243,7 +249,7 @@ def train(input, target):
     return loss.data.item() / 200
 
 def save():
-    path = f"dronningenn-{time.time()}.pt"
+    path = f"saves/queenrnn-{str(dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))}.pt"
     torch.save(decoder, path)
     print(f"Saved as `{path}`")
 
@@ -267,12 +273,21 @@ try:
         loss_avg += loss
 
         print('\033[92m[%s (epoch %d : %d%%) @ loss %.4f]\033[0m' % (since(start), epoch, epoch / EPOCHS * 100, loss))
-        print(f"{generate(decoder, None, 500)}\n")
+        
+        generated = generate(decoder, None, 500)
 
-        if epoch % 200:
+        generated = generated.replace('$', 'æ')
+        generated = generated.replace('@', 'ø')
+        generated = generated.replace('#', 'å')
+
+
+        print(f"{generated}\n")
+
+        if epoch % 200 == 0:
             print("\033[92mSaving to be safe ...\033[0m")
             save()
             print()
+
 
     print("Saving ...")
     save()
