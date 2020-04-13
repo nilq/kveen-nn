@@ -157,8 +157,6 @@ def random_set(chunk_len=200, batch_size=100):
 
 print("Doing model ... ( ͡° ͜ʖ ͡°)\n")
 
-torch.manual_seed(1)
-
 class LSTMQueen(nn.Module):
     def __init__(self, input_size, hidden_size, output_size, n_layers=1):
         super(LSTMQueen, self).__init__()
