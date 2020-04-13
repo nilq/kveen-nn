@@ -1,0 +1,6 @@
+nltk
+numpy
+torch
+unidecode
+argparse
+bs4
