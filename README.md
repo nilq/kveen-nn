@@ -9,7 +9,7 @@ This project contains a spider, that automatically crawls the royal family's web
 
 ### Making speeches
 
-`pip install -r requirenments`
+`pip install -r requirements`
 `python kween.py`
 
 The `kween.py` can be run with `--gpu` to use CUDA to run on the GPU. It will auto-save the RNN model on every 500 epochs. You can continue training where you left of by using `--based <your saved model.pt>`. The two flags can of course be used together.
