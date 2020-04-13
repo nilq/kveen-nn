@@ -26,7 +26,11 @@ import argparse
 
 argparser = argparse.ArgumentParser()
 argparser.add_argument('--based', type=str, default="")
+argparser.add_argument('--gpu', action='store_true')
 args = argparser.parse_args()
+
+if args.gpu:
+    print("=== USING GPU: GOING FAASSSSTTT!!!?! ===\n\n")
 
 # .dat sounds cooler and more hackerman than .txt
 DATA_PATH = "speeches.dat"
@@ -141,6 +145,10 @@ def random_set(chunk_len=200, batch_size=100):
 
         inp[bi] = char_tensor(chunk[:-1])
         target[bi] = char_tensor(chunk[1:])
+
+        if args.gpu:
+            inp = inp.cuda()
+            target = target.cuda()
     
     inp = Variable(inp)
     target = Variable(target)
@@ -200,6 +208,8 @@ else:
         2
     )
     
+if args.gpu:
+    decoder.cuda()
 
 optimizer = optim.Adam(decoder.parameters(), lr=0.01)
 criterion = nn.CrossEntropyLoss()
@@ -210,6 +220,10 @@ def generate(decoder, prime, predict_len=100, temperature=0.8):
 
     hidden = decoder.init_hidden(1)
     prime_input = Variable(char_tensor(prime).unsqueeze(0))
+
+    if args.gpu:
+        hidden = hidden.cuda()
+        prime_input = prime_input.cuda()
 
     predicted = prime
 
@@ -229,11 +243,17 @@ def generate(decoder, prime, predict_len=100, temperature=0.8):
 
         inp = Variable(char_tensor(pred_char).unsqueeze(0))
 
+        if args.gpu:
+            inp = inp.cuda()
+
     return predicted
 
 
 def train(input, target):
     hidden = decoder.init_hidden(100)
+
+    if args.gpu:
+        hidden = hidden.cuda()
 
     decoder.zero_grad()
     loss = 0.0
@@ -249,7 +269,7 @@ def train(input, target):
     return loss.data.item() / 200
 
 def save():
-    path = f"saves/queenrnn-{str(dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))}.pt"
+    path = f"queenrnn-{str(dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))}.pt"
     torch.save(decoder, path)
     print(f"Saved as `{path}`")
 
@@ -263,7 +283,7 @@ def since(a):
 start = time.time()
 loss_avg = 0.0
 
-EPOCHS = 1000
+EPOCHS = 5000
 
 try:
     print("Training ...\n")
